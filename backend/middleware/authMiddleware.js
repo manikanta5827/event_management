@@ -1,11 +1,12 @@
 import { verifyToken } from '../config/jwt.js';
+import { AppError } from '../utils/errorHandler.js';
 
 const authMiddleware = async (req, res, next) => {
     try {
-        const token = req.cookies.token;
+        const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
 
         if (!token) {
-            return res.status(401).json({ message: 'Authentication required' });
+            throw new AppError('Authentication required', 401);
         }
 
         const decoded = verifyToken(token);
@@ -13,7 +14,7 @@ const authMiddleware = async (req, res, next) => {
         next();
     } catch (error) {
         res.clearCookie('token');
-        return res.status(401).json({ message: 'Invalid or expired token' });
+        next(new AppError('Invalid or expired token', 401));
     }
 };
 

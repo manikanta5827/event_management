@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import { generateToken } from '../config/jwt.js';
 import { AppError } from '../utils/errorHandler.js';
-import cloudinary from '../config/cloudinary.js';
+import cloudinaryImageUpload from '../config/cloudinary.js';
 import { validateSession, validateGuestAccess } from '../utils/validators.js';
 import { AuthModel } from '../models/authModel.js';
 
@@ -25,18 +25,7 @@ export const register = async (req, res, next) => {
         }
 
         // Upload image to cloudinary if provided
-        let profileImageUrl = null;
-        if (profile_image) {
-            try {
-                const uploadResponse = await cloudinary.uploader.upload(profile_image, {
-                    folder: 'profile_images',
-                });
-                profileImageUrl = uploadResponse.secure_url;
-            } catch (error) {
-                throw new AppError('Error uploading profile image', 400);
-            }
-        }
-
+        const profileImageUrl = await cloudinaryImageUpload(profile_image, 'profile_images');
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -120,9 +109,6 @@ export const guestLogin = async (req, res, next) => {
 
 export const logout = async (req, res, next) => {
     try {
-        // Validate session
-        validateSession(req.cookies.token);
-
         // Clear cookie
         res.clearCookie('token', {
             ...cookieOptions,

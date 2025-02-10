@@ -57,21 +57,14 @@ export const login = async (req, res, next) => {
             throw new AppError(ERROR_MESSAGES.INVALID_CREDENTIALS, 401);
         }
 
-        const token = generateToken(user);
+        const token = generateToken(user, 'user');
 
         // Set cookie
         res.cookie('token', token, cookieOptions);
 
         res.json({
             success: true,
-            message: SUCCESS_MESSAGES.LOGIN,
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                profile_img: user.profile_img,
-                role: 'user'
-            }
+            message: SUCCESS_MESSAGES.LOGIN
         });
     } catch (error) {
         next(error);
@@ -87,17 +80,17 @@ export const guestLogin = async (req, res, next) => {
         const guestUser = {
             id: 'guest-' + Date.now(),
             name: 'Guest User',
-            role: 'guest'
+            profile_img: '',
         };
 
-        const token = generateToken(guestUser);
+        const token = generateToken(guestUser, 'guest');
 
         // Set cookie
         res.cookie('token', token, cookieOptions);
 
         res.json({
             success: true,
-            user: { id: guestUser.id, name: guestUser.name, role: guestUser.role }
+            message: SUCCESS_MESSAGES.LOGIN
         });
     } catch (error) {
         next(error);

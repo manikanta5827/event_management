@@ -8,6 +8,10 @@ cloudinary.config({
 
 const cloudinaryImageUpload = async (image, folder) => {
     try {
+        if (!image) return null;
+        if (image.startsWith('http') || image.startsWith('https')) {
+            return image;
+        }
         const uploadResponse = await cloudinary.uploader.upload(image, {
             folder: folder,
         });

@@ -4,9 +4,9 @@ if (!process.env.JWT_SECRET) {
     throw new Error('Environment variable JWT_SECRET is not set.');
 }
 
-export const generateToken = (user) => {
+export const generateToken = (user, role) => {
     return jwt.sign(
-        { id: user.id, email: user.email },
+        { id: user.id, name: user.name, profile_img: user.profile_img, role },
         process.env.JWT_SECRET,
         { expiresIn: '24h' }
     );

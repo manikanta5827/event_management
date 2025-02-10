@@ -38,7 +38,7 @@ export const EventModel = {
             const [upcomingEvents, pastEvents, userEvents, attendeeCounts] = await Promise.all([
                 pool.query(queries.upcoming, [now]),
                 pool.query(queries.past, [now]),
-                pool.query(queries.userEvents, [userId]),
+                userId ? pool.query(queries.userEvents, [userId]) : { rows: [] },
                 pool.query(queries.attendeeCounts)
             ]);
 
@@ -52,6 +52,7 @@ export const EventModel = {
                 }, {})
             };
         } catch (error) {
+            console.error('Error in getAllEvents:', error);
             throw new AppError(ERROR_MESSAGES.DB_ERROR, 500);
         }
     },

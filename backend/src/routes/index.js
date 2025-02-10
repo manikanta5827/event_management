@@ -1,11 +1,9 @@
 import authRoutes from './authRoutes.js';
-import userRoutes from './userRoutes.js';
 import eventRoutes from './eventRoutes.js';
 
 export default (app) => {
     // API routes
     app.use('/api/auth', authRoutes);
-    app.use('/api/user', userRoutes);
     app.use('/api/events', eventRoutes);
 
     // Health check routes

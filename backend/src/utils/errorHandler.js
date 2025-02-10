@@ -1,3 +1,5 @@
+import { ERROR_MESSAGES } from './constants.js';
+
 export class AppError extends Error {
     constructor(message, statusCode) {
         super(message);
@@ -25,6 +27,6 @@ export const errorHandler = (err, req, res, next) => {
     console.error('ERROR 💥', err);
     return res.status(500).json({
         status: 'error',
-        message: 'Something went wrong!'
+        message: ERROR_MESSAGES.SERVER_ERROR
     });
 }; 

@@ -1,11 +1,12 @@
 import dotenv from 'dotenv';
 import { validateEnv } from './utils/validateEnv.js';
-import app from '../config/express.js';
+import app from './config/express.js';
 import { errorHandler } from './utils/errorHandler.js';
-import createTables from '../config/tables.js';
+import createTables from './config/tables.js';
 import setupRoutes from './routes/index.js';
 import { swaggerDocs } from './utils/swagger.js';
 import { setupShutdownHandlers } from './utils/shutdown.js';
+import { setupSocket } from './config/socket.js';
 
 // Load environment variables
 dotenv.config();
@@ -31,6 +32,9 @@ const server = app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`📝 API Documentation available at http://localhost:${PORT}/api-docs`);
 });
+
+// Setup Socket.IO
+setupSocket(server);
 
 // Setup graceful shutdown
 setupShutdownHandlers(server);

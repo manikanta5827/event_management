@@ -12,7 +12,7 @@ const createTables = async () => {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
-
+        
         // Events Table
         await pool.query(`
             CREATE TABLE IF NOT EXISTS events (

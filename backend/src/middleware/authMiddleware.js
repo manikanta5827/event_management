@@ -1,12 +1,13 @@
 import { verifyToken } from '../config/jwt.js';
 import { AppError } from '../utils/errorHandler.js';
+import { ERROR_MESSAGES } from '../utils/constants.js';
 
 const authMiddleware = async (req, res, next) => {
     try {
-        const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+        const token = req.cookies.token;
 
         if (!token) {
-            throw new AppError('Authentication token is missing', 401);
+            throw new AppError(ERROR_MESSAGES.UNAUTHORIZED, 401);
         }
 
         try {
@@ -14,7 +15,7 @@ const authMiddleware = async (req, res, next) => {
             req.user = decoded;
             next();
         } catch (error) {
-            throw new AppError('Invalid or expired token', 401);
+            throw new AppError(ERROR_MESSAGES.INVALID_TOKEN, 401);
         }
     } catch (error) {
         if (req.cookies.token) {

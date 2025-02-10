@@ -2,8 +2,9 @@ import bcrypt from 'bcrypt';
 import { generateToken } from '../config/jwt.js';
 import { AppError } from '../utils/errorHandler.js';
 import cloudinaryImageUpload from '../config/cloudinary.js';
-import { validateSession, validateGuestAccess } from '../utils/validators.js';
+import { validateGuestAccess } from '../utils/validators.js';
 import { AuthModel } from '../models/authModel.js';
+import { SUCCESS_MESSAGES, ERROR_MESSAGES } from '../utils/constants.js';
 
 // Cookie options based on environment
 const cookieOptions = {
@@ -21,7 +22,7 @@ export const register = async (req, res, next) => {
         // Check if user exists
         const emailExists = await AuthModel.emailExists(email);
         if (emailExists) {
-            throw new AppError('Email already registered', 400);
+            throw new AppError(ERROR_MESSAGES.EMAIL_EXISTS, 400);
         }
 
         // Upload image to cloudinary if provided
@@ -39,7 +40,7 @@ export const register = async (req, res, next) => {
 
         res.status(201).json({
             success: true,
-            message: 'Registration successful. Please login.'
+            message: SUCCESS_MESSAGES.REGISTER
         });
     } catch (error) {
         next(error);
@@ -52,14 +53,8 @@ export const login = async (req, res, next) => {
 
         // Find user
         const user = await AuthModel.findByEmail(email);
-        if (!user) {
-            throw new AppError('User not found', 401);
-        }
-
-        // Check password
-        const isValidPassword = await bcrypt.compare(password, user.password);
-        if (!isValidPassword) {
-            throw new AppError('Password is incorrect', 401);
+        if (!user || !(await bcrypt.compare(password, user.password))) {
+            throw new AppError(ERROR_MESSAGES.INVALID_CREDENTIALS, 401);
         }
 
         const token = generateToken(user);
@@ -69,11 +64,13 @@ export const login = async (req, res, next) => {
 
         res.json({
             success: true,
+            message: SUCCESS_MESSAGES.LOGIN,
             user: {
                 id: user.id,
                 name: user.name,
                 email: user.email,
-                profile_img: user.profile_img
+                profile_img: user.profile_img,
+                role: 'user'
             }
         });
     } catch (error) {
@@ -110,14 +107,11 @@ export const guestLogin = async (req, res, next) => {
 export const logout = async (req, res, next) => {
     try {
         // Clear cookie
-        res.clearCookie('token', {
-            ...cookieOptions,
-            maxAge: 0
-        });
+        res.clearCookie('token', cookieOptions);
 
         res.json({
             success: true,
-            message: 'Logged out successfully'
+            message: SUCCESS_MESSAGES.LOGOUT
         });
     } catch (error) {
         next(error);

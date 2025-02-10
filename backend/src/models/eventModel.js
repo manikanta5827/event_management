@@ -206,5 +206,52 @@ export const EventModel = {
         } finally {
             client.release();
         }
+    },
+
+    getGuestEvents: async () => {
+        try {
+            const now = new Date().toISOString();
+
+            const queries = {
+                upcoming: `
+                    SELECT e.*, u.name as creator_name
+                    FROM events e
+                    LEFT JOIN users u ON e.created_by = u.id
+                    WHERE e.date_time >= $1
+                    ORDER BY e.date_time ASC
+                `,
+                past: `
+                    SELECT e.*, u.name as creator_name
+                    FROM events e
+                    LEFT JOIN users u ON e.created_by = u.id
+                    WHERE e.date_time < $1
+                    ORDER BY e.date_time DESC
+                `,
+                attendeeCounts: `
+                    SELECT event_id, COUNT(*) as attendee_count
+                    FROM attendees
+                    GROUP BY event_id
+                `
+            };
+
+            // Run all queries in parallel
+            const [upcomingEvents, pastEvents, attendeeCounts] = await Promise.all([
+                pool.query(queries.upcoming, [now]),
+                pool.query(queries.past, [now]),
+                pool.query(queries.attendeeCounts)
+            ]);
+
+            return {
+                upcoming: upcomingEvents.rows,
+                past: pastEvents.rows,
+                attendeeCounts: attendeeCounts.rows.reduce((acc, curr) => {
+                    acc[curr.event_id] = parseInt(curr.attendee_count);
+                    return acc;
+                }, {})
+            };
+        } catch (error) {
+            console.error('Error in getGuestEvents:', error);
+            throw new AppError(ERROR_MESSAGES.DB_ERROR, 500);
+        }
     }
 }; 

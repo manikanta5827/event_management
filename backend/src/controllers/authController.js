@@ -12,7 +12,7 @@ const cookieOptions = {
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     path: '/',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 2 * 24 * 60 * 60 * 1000 // 24 hours
 };
 
 export const register = async (req, res, next) => {

@@ -1,5 +1,5 @@
 import express from 'express';
-import { getAllEvents } from '../controllers/eventController.js';
+import { getAllEvents, getGuestEvents } from '../controllers/eventController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -8,24 +8,26 @@ const router = express.Router();
  * @swagger
  * /api/events:
  *   get:
- *     summary: Get all events
+ *     summary: Get all events (authenticated users)
  *     tags: [Events]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: List of all events
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Event'
- *       401:
- *         description: Unauthorized - Invalid or missing token
- *       403:
- *         description: Forbidden - Token is valid but lacks required permissions
+ *         description: List of all events with user-specific data
  */
 router.get('/', authMiddleware, getAllEvents);
+
+/**
+ * @swagger
+ * /api/events/guest:
+ *   get:
+ *     summary: Get public events (no authentication required)
+ *     tags: [Events]
+ *     responses:
+ *       200:
+ *         description: List of upcoming and past events with attendee counts
+ */
+router.get('/guest', getGuestEvents);
 
 export default router; 

@@ -8,7 +8,7 @@ export const generateToken = (user, role) => {
     return jwt.sign(
         { id: user.id, name: user.name, profile_img: user.profile_img, role },
         process.env.JWT_SECRET,
-        { expiresIn: '24h' }
+        { expiresIn: '48h' }
     );
 };
 

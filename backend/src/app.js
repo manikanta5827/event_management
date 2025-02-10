@@ -7,6 +7,7 @@ import setupRoutes from './routes/index.js';
 import { swaggerDocs } from './utils/swagger.js';
 import { setupShutdownHandlers } from './utils/shutdown.js';
 import { setupSocket } from './config/socket.js';
+import express from 'express';
 
 // Load environment variables
 dotenv.config();
@@ -23,6 +24,10 @@ swaggerDocs(app);
 
 // Setup routes
 setupRoutes(app);
+
+// Update these middleware configurations
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Error handling middleware
 app.use(errorHandler);

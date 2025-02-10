@@ -62,8 +62,8 @@ export const EventModel = {
         try {
             await client.query('BEGIN');
             const query = `
-                INSERT INTO events (name, description, date_time, category, cover_image, created_by)
-                VALUES ($1, $2, $3, $4, $5, $6)
+                INSERT INTO events (name, description, date_time, category, cover_image, location, created_by)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
                 RETURNING *
             `;
             const values = [
@@ -72,6 +72,7 @@ export const EventModel = {
                 eventData.date_time,
                 eventData.category,
                 eventData.cover_image,
+                eventData.location,
                 userId
             ];
             const result = await client.query(query, values);
@@ -110,8 +111,8 @@ export const EventModel = {
             const query = `
                 UPDATE events 
                 SET name = $1, description = $2, date_time = $3, 
-                    category = $4, cover_image = $5
-                WHERE id = $6
+                    category = $4, cover_image = $5, location = $6
+                WHERE id = $7
                 RETURNING *
             `;
             const values = [
@@ -120,6 +121,7 @@ export const EventModel = {
                 eventData.date_time,
                 eventData.category,
                 eventData.cover_image,
+                eventData.location,
                 eventId
             ];
             const result = await client.query(query, values);

@@ -22,8 +22,8 @@ app.use(cors({
 
 // Basic middleware
 app.use(morgan('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cookieParser());
 
 // Security middleware
@@ -32,12 +32,5 @@ app.use(mongoSanitize());
 app.use(xss());
 app.use(hpp());
 
-// Rate limiting
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100 // limit each IP to 100 requests per windowMs
-});
-
-app.use('/api/', limiter);
 
 export default app; 

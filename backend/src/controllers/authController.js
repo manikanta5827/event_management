@@ -8,7 +8,7 @@ import { SUCCESS_MESSAGES, ERROR_MESSAGES } from '../utils/constants.js';
 
 // Cookie options based on environment
 const cookieOptions = {
-    httpOnly: true,
+    httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     path: '/',
@@ -24,10 +24,11 @@ export const register = async (req, res, next) => {
         if (emailExists) {
             throw new AppError(ERROR_MESSAGES.EMAIL_EXISTS, 400);
         }
-
+        // console.log(name, email, password)
         // Upload image to cloudinary if provided
         const profileImageUrl = await cloudinaryImageUpload(profile_image, 'profile_images');
         // Hash password
+        // console.log(profileImageUrl)
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Create user

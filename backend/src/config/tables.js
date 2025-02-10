@@ -22,6 +22,7 @@ const createTables = async () => {
                 date_time TIMESTAMP NOT NULL,
                 category VARCHAR(100),
                 cover_image TEXT,
+                location VARCHAR(100) NOT NULL,
                 created_by UUID REFERENCES users(id),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );

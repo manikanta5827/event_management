@@ -54,6 +54,11 @@ export const eventSchemas = {
         category: yup.string()
             .required('Category is required'),
 
+        location: yup.string()
+            .required('Location is required')
+            .min(3, 'Location must be at least 3 characters')
+            .max(100, 'Location must not exceed 100 characters'),
+
         cover_image: yup.string()
             .nullable()
     })

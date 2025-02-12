@@ -8,8 +8,8 @@ import { userState, toastState } from '../store/atoms';
 import { EnvelopeIcon, LockClosedIcon } from '@heroicons/react/24/outline';
 
 const Login = () => {
-    const [email, setEmail] = useState('Hari@example.com');
-    const [password, setPassword] = useState('Hari123');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
     const setUser = useSetRecoilState(userState);

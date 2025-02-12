@@ -7,7 +7,7 @@ import { format } from 'date-fns';
 // import {  } from '@heroicons/react/24/outline';
 // import socket from '../utils/socket';
 
-const EventCard = ({ event, attendeeCount, isAttending, onEventClick, onJoinLeave, isPast }) => {
+const EventCard = ({ event, attendeeCount, isAttending, onEventClick, onJoinLeave, isPast, isGuestView }) => {
   const [loading, setLoading] = useState(false);
   // const setToast = useSetRecoilState(toastState);
   const user = useRecoilValue(userState);
@@ -37,7 +37,7 @@ const EventCard = ({ event, attendeeCount, isAttending, onEventClick, onJoinLeav
       onClick={() => onEventClick(event)}
       className="group relative bg-white rounded-xl shadow-sm overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-gray-100"
     >
-      {isOwner && !isPast && (
+      {isOwner && !isPast && !isGuestView && (
         <div className="absolute top-3 right-3 z-20 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           <button
             onClick={(e) => {
@@ -100,11 +100,13 @@ const EventCard = ({ event, attendeeCount, isAttending, onEventClick, onJoinLeav
         <div className="mt-4">
           <button
             onClick={handleAttendance}
-            disabled={loading || isPast}
+            disabled={loading || isPast || isGuestView}
             className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 
-              ${isAttending
-                ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
-                : 'bg-purple-50 text-purple-600 hover:bg-purple-100 border border-purple-200'
+              ${isGuestView
+                ? 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'
+                : isAttending
+                  ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
+                  : 'bg-purple-50 text-purple-600 hover:bg-purple-100 border border-purple-200'
               } ${(loading || isPast) ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {loading ? (
@@ -116,8 +118,9 @@ const EventCard = ({ event, attendeeCount, isAttending, onEventClick, onJoinLeav
                 Processing...
               </span>
             ) : (
-              isPast ? (isAttending ? '✓ Attended' : '✗ Did not attend') :
-                isAttending ? 'Leave Event' : 'Join Event'
+              isGuestView ? 'Login to Join' :
+                isPast ? (isAttending ? '✓ Attended' : '✗ Did not attend') :
+                  isAttending ? 'Leave Event' : 'Join Event'
             )}
           </button>
         </div>
@@ -141,7 +144,8 @@ EventCard.propTypes = {
   isAttending: PropTypes.bool.isRequired,
   onEventClick: PropTypes.func.isRequired,
   onJoinLeave: PropTypes.func.isRequired,
-  isPast: PropTypes.bool.isRequired
+  isPast: PropTypes.bool.isRequired,
+  isGuestView: PropTypes.bool
 };
 
 export default EventCard; 

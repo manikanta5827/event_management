@@ -6,7 +6,6 @@ import helmet from 'helmet';
 import mongoSanitize from 'express-mongo-sanitize';
 import xss from 'xss-clean';
 import hpp from 'hpp';
-import rateLimit from 'express-rate-limit';
 
 const app = express();
 

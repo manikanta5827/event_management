@@ -2,7 +2,7 @@ import { useRecoilValue } from 'recoil';
 import { userState } from '../store/atoms';
 import PropTypes from 'prop-types';
 import { useState } from 'react';
-import { PencilIcon, TrashIcon ,CalendarIcon, UserGroupIcon} from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, CalendarIcon, UserGroupIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
 // import {  } from '@heroicons/react/24/outline';
 // import socket from '../utils/socket';
@@ -35,73 +35,89 @@ const EventCard = ({ event, attendeeCount, isAttending, onEventClick, onJoinLeav
   return (
     <div
       onClick={() => onEventClick(event)}
-      className="relative bg-white rounded-lg shadow-md overflow-hidden cursor-pointer transition-transform hover:scale-105"
+      className="group relative bg-white rounded-xl shadow-sm overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-gray-100"
     >
       {isOwner && !isPast && (
-        <div className="absolute top-2 right-2 z-20 flex space-x-2">
+        <div className="absolute top-3 right-3 z-20 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           <button
             onClick={(e) => {
               e.stopPropagation();
               onEventClick(event, 'update');
             }}
-            className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors"
+            className="p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:bg-white transition-all duration-200"
+            title="Edit event"
           >
-            <PencilIcon className="w-4 h-4 text-gray-600" />
+            <PencilIcon className="w-4 h-4 text-gray-700" />
           </button>
           <button
             onClick={(e) => {
               e.stopPropagation();
               onEventClick(event, 'delete');
             }}
-            className="p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors"
+            className="p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:bg-white transition-all duration-200"
+            title="Delete event"
           >
-            <TrashIcon className="w-4 h-4 text-red-600" />
+            <TrashIcon className="w-4 h-4 text-red-500" />
           </button>
         </div>
       )}
+
       <div className="relative h-48">
-        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent"></div>
         <img
           src={event.cover_image || '/default-event.jpg'}
           alt={event.name}
           className="w-full h-full object-cover"
         />
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
-          <h3 className="text-white font-semibold text-lg">{event.name}</h3>
-        </div>
-      </div>
-      <div className="p-4">
-        <h3 className="text-xl font-semibold mb-2">{event.name}</h3>
-
-        <div className="flex items-center text-gray-600 mb-2">
-          <CalendarIcon className="w-4 h-4 mr-2" />
-          <span>{format(new Date(event.date_time), 'PPp')}</span>
-        </div>
-
-        <div className="mb-2">
-          <span className="inline-block bg-purple-100 text-purple-800 text-sm px-2 py-1 rounded">
+        <div className="absolute bottom-0 left-0 right-0 p-4">
+          <span className="inline-block px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500 text-white mb-2">
             {event.category}
           </span>
+          <h3 className="text-lg font-bold text-white text-shadow-sm line-clamp-2">{event.name}</h3>
+        </div>
+      </div>
+
+      <div className="p-4">
+        <div className="space-y-3">
+          <div className="flex items-center text-gray-600">
+            <CalendarIcon className="w-5 h-5 mr-2 text-purple-500" />
+            <span className="text-sm">{format(new Date(event.date_time), 'PPp')}</span>
+          </div>
+
+          <div className="flex items-center text-gray-600">
+            <MapPinIcon className="w-5 h-5 mr-2 text-purple-500" />
+            <span className="text-sm truncate">{event.location}</span>
+          </div>
+
+          <div className="flex items-center text-gray-600">
+            <UserGroupIcon className="w-5 h-5 mr-2 text-purple-500" />
+            <span className="text-sm">
+              {attendeeCount} {attendeeCount === 1 ? 'person' : 'people'} {isPast ? 'attended' : 'attending'}
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center justify-between mt-4">
-          <div className="flex items-center text-gray-600">
-            <UserGroupIcon className="w-5 h-5 mr-1" />
-            <span>{attendeeCount} attending</span>
-          </div>
+        <div className="mt-4">
           <button
             onClick={handleAttendance}
             disabled={loading || isPast}
-            className={`px-4 py-2 rounded-lg text-sm font-medium ${isAttending
-              ? 'bg-red-100 text-red-600 hover:bg-red-200'
-              : 'bg-purple-100 text-purple-600 hover:bg-purple-200'
+            className={`w-full py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 
+              ${isAttending
+                ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
+                : 'bg-purple-50 text-purple-600 hover:bg-purple-100 border border-purple-200'
               } ${(loading || isPast) ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {loading ? (
-              <span className="inline-block animate-pulse">Processing...</span>
+              <span className="inline-flex items-center justify-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Processing...
+              </span>
             ) : (
-              isPast ? (isAttending ? 'Attended' : 'Did not attend') :
-                isAttending ? 'Leave' : 'Join'
+              isPast ? (isAttending ? '✓ Attended' : '✗ Did not attend') :
+                isAttending ? 'Leave Event' : 'Join Event'
             )}
           </button>
         </div>

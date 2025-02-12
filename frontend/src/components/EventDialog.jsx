@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, MapPinIcon, CalendarIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 import { useSetRecoilState, useRecoilValue } from 'recoil';
 import { toastState, userState } from '../store/atoms';
 import PropTypes from 'prop-types';
@@ -52,17 +52,10 @@ const EventDialog = ({ event, onClose, isAttending, attendeeCount, onStatusChang
     if (isPast) return;
     setLoading(true);
     try {
-      if (isAttending) {
-        socket.emit('leave_event', {
-          userId: user.id,
-          eventId: event.id
-        });
-      } else {
-        socket.emit('join_event', {
-          userId: user.id,
-          eventId: event.id
-        });
-      }
+      socket.emit(isAttending ? 'leave_event' : 'join_event', {
+        userId: user.id,
+        eventId: event.id
+      });
       onStatusChange();
     } catch (error) {
       console.error('Socket error:', error);
@@ -72,68 +65,90 @@ const EventDialog = ({ event, onClose, isAttending, attendeeCount, onStatusChang
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-auto bg-gray-500 bg-opacity-75 flex justify-center items-center">
-      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4">
-        {/* Close button for mobile */}
-        <button
-          onClick={handleClose}
-          className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/70"
-        >
-          <XMarkIcon className="w-6 h-6" />
-        </button>
-
-        {/* Image Section */}
-        <img
-          src={event.cover_image || '/default-event.jpg'}
-          alt={event.name}
-          className="w-full h-64 object-cover"
-        />
-
-        {/* Content Section */}
-        <div className="p-6">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">{event.name}</h2>
-              <p className="text-gray-600">Created by {event.creator_name}</p>
-            </div>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm">
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div className="relative bg-white rounded-xl shadow-xl w-full max-w-3xl overflow-hidden">
+          <div className="relative h-96">
+            <img
+              src={event.cover_image || '/default-event.jpg'}
+              alt={event.name}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent"></div>
             <button
-              onClick={handleAttendance}
-              disabled={loading || isPast}
-              className={`px-6 py-2 rounded-lg font-medium ${isAttending
-                ? 'bg-red-100 text-red-600 hover:bg-red-200'
-                : 'bg-purple-100 text-purple-600 hover:bg-purple-200'
-                } ${(loading || isPast) ? 'opacity-50 cursor-not-allowed' : ''}`}
+              onClick={handleClose}
+              className="absolute top-4 right-4 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
             >
-              {loading ? (
-                <span className="inline-block animate-pulse">Processing...</span>
-              ) : (
-                isPast ? (isAttending ? 'Attended' : 'Did not attend') :
-                  isAttending ? 'Leave Event' : 'Join Event'
-              )}
+              <XMarkIcon className="w-6 h-6" />
             </button>
+            <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+              <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-purple-500 mb-3">
+                {event.category}
+              </span>
+              <h2 className="text-3xl font-bold mb-2">{event.name}</h2>
+            </div>
           </div>
 
-          <div className="space-y-4">
-            <div>
-              <h3 className="font-medium text-gray-900">Date & Time</h3>
-              <p className="text-gray-600">
-                {formatDateTime(event.date_time)}
-              </p>
-            </div>
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="col-span-2 space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">About this event</h3>
+                  <p className="text-gray-600 whitespace-pre-wrap">{event.description}</p>
+                </div>
 
-            <div>
-              <h3 className="font-medium text-gray-900">Location</h3>
-              <p className="text-gray-600">{event.location}</p>
-            </div>
+                <button
+                  onClick={handleAttendance}
+                  disabled={loading || isPast}
+                  className={`w-full py-3 rounded-lg font-medium transition-colors ${isAttending
+                      ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
+                      : 'bg-purple-50 text-purple-600 hover:bg-purple-100 border border-purple-200'
+                    } ${(loading || isPast) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {loading ? (
+                    <span className="inline-flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processing...
+                    </span>
+                  ) : (
+                    isPast ? (isAttending ? '✓ Attended' : '✗ Did not attend') :
+                      isAttending ? 'Leave Event' : 'Join Event'
+                  )}
+                </button>
+              </div>
 
-            <div>
-              <h3 className="font-medium text-gray-900">Description</h3>
-              <p className="text-gray-600">{event.description}</p>
-            </div>
+              <div className="space-y-6">
+                <div className="bg-gray-50 rounded-lg p-4 space-y-4">
+                  <div className="flex items-center text-gray-700">
+                    <CalendarIcon className="w-5 h-5 text-purple-500 mr-3" />
+                    <div>
+                      <p className="text-sm font-medium">Date and time</p>
+                      <p className="text-sm text-gray-500">{formatDateTime(event.date_time)}</p>
+                    </div>
+                  </div>
 
-            <div>
-              <h3 className="font-medium text-gray-900">Attendees</h3>
-              <p className="text-gray-600">{attendeeCount} people {isPast ? 'attended' : 'attending'}</p>
+                  <div className="flex items-center text-gray-700">
+                    <MapPinIcon className="w-5 h-5 text-purple-500 mr-3" />
+                    <div>
+                      <p className="text-sm font-medium">Location</p>
+                      <p className="text-sm text-gray-500">{event.location}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center text-gray-700">
+                    <UserGroupIcon className="w-5 h-5 text-purple-500 mr-3" />
+                    <div>
+                      <p className="text-sm font-medium">Attendees</p>
+                      <p className="text-sm text-gray-500">
+                        {attendeeCount} {attendeeCount === 1 ? 'person' : 'people'} {isPast ? 'attended' : 'attending'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -150,7 +165,8 @@ EventDialog.propTypes = {
     date_time: PropTypes.string.isRequired,
     location: PropTypes.string.isRequired,
     description: PropTypes.string.isRequired,
-    cover_image: PropTypes.string
+    cover_image: PropTypes.string,
+    category: PropTypes.string.isRequired,
   }).isRequired,
   onClose: PropTypes.func.isRequired,
   isAttending: PropTypes.bool.isRequired,

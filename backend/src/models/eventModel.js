@@ -256,5 +256,21 @@ export const EventModel = {
             console.error('Error in getGuestEvents:', error);
             throw new AppError(ERROR_MESSAGES.DB_ERROR, 500);
         }
+    },
+
+    getEvent: async (eventId) => {
+        try {
+            const query = `
+                SELECT e.*, u.name as creator_name
+                FROM events e
+                LEFT JOIN users u ON e.created_by = u.id
+                WHERE e.id = $1
+            `;
+            const result = await pool.query(query, [eventId]);
+            return result.rows[0];
+        } catch (error) {
+            console.error('Error in getEvent:', error);
+            throw new AppError(ERROR_MESSAGES.DB_ERROR, 500);
+        }
     }
 }; 

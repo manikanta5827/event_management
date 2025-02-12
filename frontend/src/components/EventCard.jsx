@@ -2,7 +2,9 @@ import { useRecoilValue } from 'recoil';
 import { userState } from '../store/atoms';
 import PropTypes from 'prop-types';
 import { useState } from 'react';
-import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon ,CalendarIcon, UserGroupIcon} from '@heroicons/react/24/outline';
+import { format } from 'date-fns';
+// import {  } from '@heroicons/react/24/outline';
 // import socket from '../utils/socket';
 
 const EventCard = ({ event, attendeeCount, isAttending, onEventClick, onJoinLeave, isPast }) => {
@@ -68,25 +70,41 @@ const EventCard = ({ event, attendeeCount, isAttending, onEventClick, onJoinLeav
           <h3 className="text-white font-semibold text-lg">{event.name}</h3>
         </div>
       </div>
-      <div className="p-4 flex items-center justify-between">
-        <div className="text-sm text-gray-600">
-          <span>{attendeeCount} {isPast ? 'attended' : 'attending'}</span>
+      <div className="p-4">
+        <h3 className="text-xl font-semibold mb-2">{event.name}</h3>
+
+        <div className="flex items-center text-gray-600 mb-2">
+          <CalendarIcon className="w-4 h-4 mr-2" />
+          <span>{format(new Date(event.date_time), 'PPp')}</span>
         </div>
-        <button
-          onClick={handleAttendance}
-          disabled={loading || isPast}
-          className={`px-4 py-2 rounded-lg text-sm font-medium ${isAttending
-            ? 'bg-red-100 text-red-600 hover:bg-red-200'
-            : 'bg-purple-100 text-purple-600 hover:bg-purple-200'
-            } ${(loading || isPast) ? 'opacity-50 cursor-not-allowed' : ''}`}
-        >
-          {loading ? (
-            <span className="inline-block animate-pulse">Processing...</span>
-          ) : (
-            isPast ? (isAttending ? 'Attended' : 'Did not attend') :
-              isAttending ? 'Leave' : 'Join'
-          )}
-        </button>
+
+        <div className="mb-2">
+          <span className="inline-block bg-purple-100 text-purple-800 text-sm px-2 py-1 rounded">
+            {event.category}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center text-gray-600">
+            <UserGroupIcon className="w-5 h-5 mr-1" />
+            <span>{attendeeCount} attending</span>
+          </div>
+          <button
+            onClick={handleAttendance}
+            disabled={loading || isPast}
+            className={`px-4 py-2 rounded-lg text-sm font-medium ${isAttending
+              ? 'bg-red-100 text-red-600 hover:bg-red-200'
+              : 'bg-purple-100 text-purple-600 hover:bg-purple-200'
+              } ${(loading || isPast) ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            {loading ? (
+              <span className="inline-block animate-pulse">Processing...</span>
+            ) : (
+              isPast ? (isAttending ? 'Attended' : 'Did not attend') :
+                isAttending ? 'Leave' : 'Join'
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

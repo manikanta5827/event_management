@@ -4,20 +4,7 @@ import { useRecoilValue } from 'recoil';
 import { userState } from '../store/atoms';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import socket from '../utils/socket';
-
-// Add this constant at the top of the file, outside the component
-const CATEGORIES = [
-  'Technology',
-  'Education',
-  'Business',
-  'Entertainment',
-  'Arts & Culture',
-  'Sports',
-  'Health & Wellness',
-  'Science',
-  'Music',
-  'Food & Drinks'
-];
+import { CATEGORIES } from '../utils/constants';
 
 const EventForm = ({ event, onClose, mode, onSuccess }) => {
   const user = useRecoilValue(userState);

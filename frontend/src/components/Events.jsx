@@ -8,6 +8,7 @@ import EventForm from './EventForm';
 import DeleteEventDialog from './DeleteEventDialog';
 import socket from '../utils/socket';
 import { PlusIcon } from '@heroicons/react/24/outline';
+import { CATEGORIES } from '../utils/constants';
 
 const Events = () => {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
@@ -20,13 +21,29 @@ const Events = () => {
   const user = useRecoilValue(userState);
   const setToast = useSetRecoilState(toastState);
 
+  // Add new state for filters
+  const [filters, setFilters] = useState({
+    category: '',
+    dateRange: {
+      start: '',
+      end: ''
+    }
+  });
+
   useEffect(() => {
     fetchEvents();
     const cleanupSocket = setupSocketEvents();
-    return () => cleanupSocket();
+
+    // Cleanup function
+    return () => {
+      if (typeof cleanupSocket === 'function') {
+        cleanupSocket();
+      }
+    };
   }, [user]);
 
   const setupSocketEvents = () => {
+    // Remove existing listeners
     socket.off('event_created');
     socket.off('event_updated');
     socket.off('event_deleted');
@@ -35,6 +52,10 @@ const Events = () => {
     socket.on('event_created', (newEvent) => {
       console.log('Event created:', newEvent);
       if (newEvent.created_by !== user.id) {
+        setToast({
+          message: `New event "${newEvent.name}" has been created`,
+          type: 'success'
+        });
         if (new Date(newEvent.date_time) > new Date()) {
           setUpcomingEvents(prev => {
             if (prev.some(event => event.id === newEvent.id)) {
@@ -59,6 +80,10 @@ const Events = () => {
 
     socket.on('event_updated', (updatedEvent) => {
       if (updatedEvent.created_by !== user.id) {
+        setToast({
+          message: `Event "${updatedEvent.name}" has been updated`,
+          type: 'info'
+        });
         const updateEventInList = (prev) =>
           prev.map(event => event.id === updatedEvent.id ? updatedEvent : event)
             .sort((a, b) => new Date(a.date_time) - new Date(b.date_time));
@@ -73,23 +98,47 @@ const Events = () => {
       }
     });
 
-    socket.on('event_deleted', (deletedEventId) => {
-      if (typeof deletedEventId === 'string') {
-        setUpcomingEvents(prev => prev.filter(event => event.id !== deletedEventId));
-        setPastEvents(prev => prev.filter(event => event.id !== deletedEventId));
+    socket.on('event_deleted', (data) => {
+      if (data && data.eventId) {
+        setToast({
+          message: `Event "${data.eventName}" has been deleted`,
+          type: 'info'
+        });
+        // Update upcoming events
+        setUpcomingEvents(prev => {
+          const filtered = prev.filter(event => event.id !== data.eventId);
+          console.log('Filtered upcoming events:', filtered);
+          return filtered;
+        });
+
+        // Update past events
+        setPastEvents(prev => {
+          const filtered = prev.filter(event => event.id !== data.eventId);
+          console.log('Filtered past events:', filtered);
+          return filtered;
+        });
       }
     });
 
-    socket.on('attendee_update', ({ eventId, attendeeCount }) => {
+    socket.on('attendee_update', ({ eventId, attendeeCount, eventName, action, userName }) => {
       const count = parseInt(attendeeCount, 10);
       if (!isNaN(count) && count >= 0) {
         setAttendeeCounts(prev => ({
           ...prev,
           [eventId]: count
         }));
+
+        // Show toast for join/leave updates
+        if (userName !== user.name) {
+          setToast({
+            message: `${userName} has ${action} event "${eventName}"`,
+            type: 'info'
+          });
+        }
       }
     });
 
+    // Return cleanup function
     return () => {
       socket.off('event_created');
       socket.off('event_updated');
@@ -132,6 +181,7 @@ const Events = () => {
   const handleJoinLeave = async (eventId, isJoining) => {
     const socketEvent = isJoining ? 'join_event' : 'leave_event';
     const currentCount = attendeeCounts[eventId] || 0;
+    const event = upcomingEvents.find(e => e.id === eventId) || pastEvents.find(e => e.id === eventId);
 
     setUserEvents(prev =>
       isJoining
@@ -144,9 +194,19 @@ const Events = () => {
       [eventId]: Math.max(0, currentCount + (isJoining ? 1 : -1))
     }));
 
+    // Show toast for the user performing the action
+    setToast({
+      message: isJoining
+        ? `You have joined "${event.name}"`
+        : `You have left "${event.name}"`,
+      type: 'success'
+    });
+
     socket.emit(socketEvent, {
       userId: user.id,
-      eventId: eventId
+      eventId: eventId,
+      eventName: event.name,
+      userName: user.name
     });
   };
 
@@ -164,6 +224,10 @@ const Events = () => {
   const handleEventCreated = (newEvent) => {
     if (!newEvent) return;
 
+    setToast({
+      message: 'Event created successfully!',
+      type: 'success'
+    });
     if (new Date(newEvent.date_time) > new Date()) {
       setUpcomingEvents(prev => [...prev, newEvent].sort((a, b) =>
         new Date(a.date_time) - new Date(b.date_time)
@@ -178,6 +242,10 @@ const Events = () => {
   const handleEventUpdated = (updatedEvent) => {
     if (!updatedEvent) return;
 
+    setToast({
+      message: 'Event updated successfully!',
+      type: 'success'
+    });
     const updateEventInList = (prev) =>
       prev.map(event => event.id === updatedEvent.id ? updatedEvent : event)
         .sort((a, b) => new Date(a.date_time) - new Date(b.date_time));
@@ -194,8 +262,34 @@ const Events = () => {
   const handleEventDeleted = (eventId) => {
     if (!eventId) return;
 
+    setToast({
+      message: 'Event deleted successfully!',
+      type: 'success'
+    });
     setUpcomingEvents(prev => prev.filter(event => event.id !== eventId));
     setPastEvents(prev => prev.filter(event => event.id !== eventId));
+  };
+
+  // Add filtered events getter
+  const getFilteredEvents = (events) => {
+    return events.filter(event => {
+      const eventDate = new Date(event.date_time);
+
+      // Category filter
+      if (filters.category && event.category !== filters.category) {
+        return false;
+      }
+
+      // Date range filter
+      if (filters.dateRange.start && new Date(filters.dateRange.start) > eventDate) {
+        return false;
+      }
+      if (filters.dateRange.end && new Date(filters.dateRange.end) < eventDate) {
+        return false;
+      }
+
+      return true;
+    });
   };
 
   if (upcomingEvents.length === 0 && pastEvents.length === 0) {
@@ -209,6 +303,84 @@ const Events = () => {
   const isUserAttending = (eventId) => {
     return userEvents.includes(eventId);
   };
+
+  // Add filter components
+  const FilterSection = () => (
+    <div className="mb-6 p-4 bg-white rounded-lg shadow">
+      <h3 className="text-lg font-semibold mb-4">Filters</h3>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Category filter */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Category
+          </label>
+          <select
+            value={filters.category}
+            onChange={(e) => setFilters(prev => ({
+              ...prev,
+              category: e.target.value
+            }))}
+            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+          >
+            <option value="">All Categories</option>
+            {CATEGORIES.map(category => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Date range filter */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Start Date
+          </label>
+          <input
+            type="date"
+            value={filters.dateRange.start}
+            onChange={(e) => setFilters(prev => ({
+              ...prev,
+              dateRange: {
+                ...prev.dateRange,
+                start: e.target.value
+              }
+            }))}
+            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            End Date
+          </label>
+          <input
+            type="date"
+            value={filters.dateRange.end}
+            onChange={(e) => setFilters(prev => ({
+              ...prev,
+              dateRange: {
+                ...prev.dateRange,
+                end: e.target.value
+              }
+            }))}
+            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+        </div>
+      </div>
+
+      {/* Clear filters button */}
+      <button
+        onClick={() => setFilters({
+          category: '',
+          dateRange: { start: '', end: '' }
+        })}
+        className="mt-4 px-4 py-2 text-sm text-purple-600 hover:text-purple-800"
+      >
+        Clear Filters
+      </button>
+    </div>
+  );
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -243,19 +415,23 @@ const Events = () => {
         </button>
       </div>
 
-      {/* Events grid */}
+      {/* Add filter section */}
+      <FilterSection />
+
+      {/* Update events grid to use filtered events */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {(activeTab === 'upcoming' ? upcomingEvents : pastEvents).map((event) => (
-          <EventCard
-            key={`event-${event.id}`}
-            event={event}
-            attendeeCount={attendeeCounts[event.id] || 0}
-            isAttending={isUserAttending(event.id)}
-            onEventClick={handleEventClick}
-            onJoinLeave={handleJoinLeave}
-            isPast={activeTab === 'past'}
-          />
-        ))}
+        {getFilteredEvents(activeTab === 'upcoming' ? upcomingEvents : pastEvents)
+          .map((event) => (
+            <EventCard
+              key={`event-${event.id}`}
+              event={event}
+              attendeeCount={attendeeCounts[event.id] || 0}
+              isAttending={isUserAttending(event.id)}
+              onEventClick={handleEventClick}
+              onJoinLeave={handleJoinLeave}
+              isPast={activeTab === 'past'}
+            />
+          ))}
       </div>
 
       {/* Dialogs */}

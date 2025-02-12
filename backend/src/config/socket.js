@@ -1,7 +1,7 @@
 import { Server } from 'socket.io';
 import { EventModel } from '../models/eventModel.js';
 import { SUCCESS_MESSAGES, ERROR_MESSAGES } from '../utils/constants.js';
-import { cloudinaryImageUpload } from './cloudinary.js';
+import { cloudinaryImageUpload, cloudinaryImageDelete } from './cloudinary.js';
 import { checkConnection } from './db.js';
 import { AppError } from '../utils/errorHandler.js';
 
@@ -21,42 +21,20 @@ export const setupSocket = (server) => {
     io.on('connection', (socket) => {
         console.log(`🟢 Client connected: ${socket.id}`);
 
-        const handleEvent = async (eventName, handler) => {
+        // Event handlers
+        socket.on('new_event', async ({ eventData, userId }, callback) => {
+            console.log(`📝 New event request received from user ${userId}:`);
+            if (!userId) {
+                callback({ success: false, error: ERROR_MESSAGES.UNAUTHORIZED });
+                return;
+            }
+
             try {
-                // Check database connection before proceeding
                 const isConnected = await checkConnection();
                 if (!isConnected) {
                     throw new AppError('Database connection error. Please try again.', 500);
                 }
 
-                const result = await handler();
-                if (result.broadcast) {
-                    console.log(`📢 Broadcasting ${result.broadcast.event}:`, result.broadcast.data);
-                    socket.broadcast.emit(result.broadcast.event, result.broadcast.data);
-                }
-                console.log(`✅ ${eventName} success:`, result.message);
-                socket.emit('success', {
-                    event: eventName,
-                    message: result.message
-                });
-            } catch (error) {
-                console.error(`❌ ${eventName} error:`, error);
-                socket.emit('error', {
-                    event: eventName,
-                    message: error.message || 'An unexpected error occurred'
-                });
-            }
-        };
-
-        // Event handlers
-        socket.on('new_event', async ({ eventData, userId }) => {
-            console.log(`📝 New event request received from user ${userId}:`);
-            if (!userId) {
-                socket.emit('error', { message: ERROR_MESSAGES.UNAUTHORIZED });
-                return;
-            }
-
-            await handleEvent('new_event', async () => {
                 console.log('🖼️ Uploading event image...');
                 const imageUrl = await cloudinaryImageUpload(eventData.cover_image, 'events');
                 console.log('📸 Image uploaded:', imageUrl);
@@ -65,26 +43,32 @@ export const setupSocket = (server) => {
                     ...eventData,
                     cover_image: imageUrl
                 }, userId);
-                console.log('✨ Event created:', event);
+                // console.log('✨ Event created:', event);
 
-                return {
-                    broadcast: {
-                        event: 'event_created',
-                        data: event
-                    },
-                    message: SUCCESS_MESSAGES.EVENT_CREATED
-                };
-            });
+                // Send success response to creator
+                callback({ success: true, event });
+
+                // Broadcast to other clients
+                socket.broadcast.emit('event_created', event);
+            } catch (error) {
+                console.error(`❌ New event error:`, error);
+                callback({ success: false, error: error.message });
+            }
         });
 
-        socket.on('update_event', async ({ eventId, eventData, userId }) => {
+        socket.on('update_event', async ({ eventId, eventData, userId }, callback) => {
             console.log(`🔄 Update event request received for event ${eventId} from user ${userId}:`);
             if (!userId) {
-                socket.emit('error', { message: ERROR_MESSAGES.UNAUTHORIZED });
+                callback({ success: false, error: ERROR_MESSAGES.UNAUTHORIZED });
                 return;
             }
 
-            await handleEvent('update_event', async () => {
+            try {
+                const isConnected = await checkConnection();
+                if (!isConnected) {
+                    throw new AppError('Database connection error. Please try again.', 500);
+                }
+
                 let imageUrl = eventData.cover_image;
                 if (eventData.cover_image && !eventData.cover_image.startsWith('http')) {
                     console.log('🖼️ Uploading new event image...');
@@ -96,31 +80,59 @@ export const setupSocket = (server) => {
                     ...eventData,
                     cover_image: imageUrl
                 }, userId);
-                console.log('✨ Event updated:', event);
+                // console.log('✨ Event updated:', event);
 
-                return {
-                    broadcast: {
-                        event: 'event_updated',
-                        data: event
-                    },
-                    message: SUCCESS_MESSAGES.EVENT_UPDATED
-                };
-            });
+                // Send success response to creator
+                callback({ success: true, event });
+
+                // Broadcast to other clients
+                socket.broadcast.emit('event_updated', event);
+            } catch (error) {
+                console.error(`❌ Update event error:`, error);
+                callback({ success: false, error: error.message });
+            }
         });
 
-        socket.on('delete_event', async ({ eventId, userId }) => {
+        socket.on('delete_event', async ({ eventId, userId }, callback) => {
             console.log(`🗑️ Delete event request received for event ${eventId} from user ${userId}`);
             try {
+                const isConnected = await checkConnection();
+                if (!isConnected) {
+                    throw new AppError('Database connection error. Please try again.', 500);
+                }
+
+                // Get event details before deletion
+                const event = await EventModel.getEvent(eventId);
+                if (!event) {
+                    throw new AppError(ERROR_MESSAGES.EVENT_NOT_FOUND, 404);
+                }
+
+                // Delete event from database
                 const result = await EventModel.deleteEvent(eventId, userId);
                 if (result) {
+                    // Delete image from Cloudinary if it exists
+                    if (event.cover_image) {
+                        console.log('🗑️ Deleting event image from Cloudinary...');
+                        await cloudinaryImageDelete(event.cover_image);
+                        console.log('✨ Event image deleted successfully');
+                    }
+
                     console.log(`✨ Event ${eventId} deleted successfully`);
-                    socket.broadcast.emit('event_deleted', eventId);
-                    socket.emit('success', { message: SUCCESS_MESSAGES.EVENT_DELETED });
+
+                    // Send success response to creator
+                    callback({ success: true });
+
+                    // Broadcast to other clients with event details
+                    socket.broadcast.emit('event_deleted', {
+                        eventId: eventId,
+                        eventName: event.name
+                    });
                 }
             } catch (error) {
                 console.error(`❌ Delete event error:`, error.message);
-                socket.emit('error', {
-                    message: error.message === ERROR_MESSAGES.NOT_EVENT_OWNER
+                callback({
+                    success: false,
+                    error: error.message === ERROR_MESSAGES.NOT_EVENT_OWNER
                         ? error.message
                         : `${ERROR_MESSAGES.EVENT_DELETE_FAILED}: ${error.message}`
                 });

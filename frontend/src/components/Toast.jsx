@@ -1,6 +1,11 @@
 import { useEffect } from 'react';
 import { useRecoilState } from 'recoil';
 import { toastState } from '../store/atoms';
+import {
+  CheckCircleIcon,
+  XCircleIcon,
+  InformationCircleIcon
+} from '@heroicons/react/24/outline';
 
 const Toast = () => {
   const [toast, setToast] = useRecoilState(toastState);
@@ -17,27 +22,41 @@ const Toast = () => {
 
   if (!toast.message) return null;
 
-  const bgColor = toast.type === 'error' ? 'bg-red-500' : 'bg-green-500';
+  const getToastStyles = () => {
+    switch (toast.type) {
+      case 'success':
+        return {
+          bg: 'bg-green-500',
+          icon: <CheckCircleIcon className="w-5 h-5" />
+        };
+      case 'error':
+        return {
+          bg: 'bg-red-500',
+          icon: <XCircleIcon className="w-5 h-5" />
+        };
+      case 'info':
+        return {
+          bg: 'bg-blue-500',
+          icon: <InformationCircleIcon className="w-5 h-5" />
+        };
+      default:
+        return {
+          bg: 'bg-gray-500',
+          icon: <InformationCircleIcon className="w-5 h-5" />
+        };
+    }
+  };
+
+  const { bg, icon } = getToastStyles();
 
   return (
     <div className="fixed top-4 right-4 z-50 animate-fade-in-down">
-      <div className={`${bgColor} text-white px-6 py-3 rounded-lg shadow-lg`}>
-        {toast.message}
+      <div className={`${bg} text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2`}>
+        {icon}
+        <span>{toast.message}</span>
       </div>
     </div>
   );
 };
 
 export default Toast;
-
-// Add this to your global CSS or tailwind config
-// @keyframes fadeInDown {
-//   from {
-//     opacity: 0;
-//     transform: translateY(-20px);
-//   }
-//   to {
-//     opacity: 1;
-//     transform: translateY(0);
-//   }
-// } 

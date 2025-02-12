@@ -4,7 +4,7 @@ import { useRecoilValue } from 'recoil';
 import { userState } from '../store/atoms';
 import socket from '../utils/socket';
 
-const DeleteEventDialog = ({ event, onClose }) => {
+const DeleteEventDialog = ({ event, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const user = useRecoilValue(userState);
 
@@ -14,12 +14,20 @@ const DeleteEventDialog = ({ event, onClose }) => {
       socket.emit('delete_event', {
         eventId: event.id,
         userId: user.id
+      }, (response) => {
+        if (response?.success) {
+          onSuccess();
+          onClose();
+        } else {
+          console.error('Failed to delete event:', response?.error);
+          // Optionally show error toast here
+        }
+        setLoading(false);
       });
-      onClose();
     } catch (error) {
-      console.error('Error:', error);
-    } finally {
+      console.error('Error deleting event:', error);
       setLoading(false);
+      onClose();
     }
   };
 
@@ -54,7 +62,8 @@ const DeleteEventDialog = ({ event, onClose }) => {
 
 DeleteEventDialog.propTypes = {
   event: PropTypes.object.isRequired,
-  onClose: PropTypes.func.isRequired
+  onClose: PropTypes.func.isRequired,
+  onSuccess: PropTypes.func.isRequired
 };
 
 export default DeleteEventDialog; 

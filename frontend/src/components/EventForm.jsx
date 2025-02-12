@@ -5,7 +5,21 @@ import { userState } from '../store/atoms';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import socket from '../utils/socket';
 
-const EventForm = ({ event, onClose, mode }) => {
+// Add this constant at the top of the file, outside the component
+const CATEGORIES = [
+  'Technology',
+  'Education',
+  'Business',
+  'Entertainment',
+  'Arts & Culture',
+  'Sports',
+  'Health & Wellness',
+  'Science',
+  'Music',
+  'Food & Drinks'
+];
+
+const EventForm = ({ event, onClose, mode, onSuccess }) => {
   const user = useRecoilValue(userState);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -44,26 +58,42 @@ const EventForm = ({ event, onClose, mode }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       if (mode === 'create') {
-        console.log('Creating new event');
         socket.emit('new_event', {
           eventData: formData,
           userId: user.id
+        }, (response) => {
+          if (response?.success && response.event) {
+            onSuccess(response.event);
+            onClose();
+          } else {
+            console.error('Failed to create event:', response?.error);
+            // Optionally show error toast here
+          }
+          setLoading(false);
         });
       } else {
         socket.emit('update_event', {
           eventId: event.id,
           eventData: formData,
           userId: user.id
+        }, (response) => {
+          if (response?.success && response.event) {
+            onSuccess(response.event);
+            onClose();
+          } else {
+            console.error('Failed to update event:', response?.error);
+            // Optionally show error toast here
+          }
+          setLoading(false);
         });
       }
-      onClose();
     } catch (error) {
       console.error('Error:', error);
-    } finally {
       setLoading(false);
+      onClose();
     }
   };
 
@@ -82,7 +112,6 @@ const EventForm = ({ event, onClose, mode }) => {
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Form fields */}
           <div className="space-y-4">
             <input
               type="text"
@@ -92,7 +121,7 @@ const EventForm = ({ event, onClose, mode }) => {
               className="w-full px-4 py-2 border rounded"
               required
             />
-            
+
             <textarea
               placeholder="Description"
               value={formData.description}
@@ -118,14 +147,26 @@ const EventForm = ({ event, onClose, mode }) => {
               required
             />
 
-            <input
-              type="text"
-              placeholder="Category"
-              value={formData.category}
-              onChange={e => setFormData(prev => ({ ...prev, category: e.target.value }))}
-              className="w-full px-4 py-2 border rounded"
-              required
-            />
+            <div className="relative">
+              <select
+                value={formData.category}
+                onChange={e => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                className="w-full px-4 py-2 border rounded appearance-none bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500"
+                required
+              >
+                <option value="">Select Category</option>
+                {CATEGORIES.map(category => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
 
             <input
               type="file"
@@ -152,7 +193,8 @@ const EventForm = ({ event, onClose, mode }) => {
 EventForm.propTypes = {
   event: PropTypes.object,
   onClose: PropTypes.func.isRequired,
-  mode: PropTypes.oneOf(['create', 'update']).isRequired
+  mode: PropTypes.oneOf(['create', 'update']).isRequired,
+  onSuccess: PropTypes.func.isRequired
 };
 
 export default EventForm; 

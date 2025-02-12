@@ -22,34 +22,62 @@ const Events = () => {
 
   useEffect(() => {
     fetchEvents();
-    setupSocketEvents();
+    const cleanupSocket = setupSocketEvents();
+    return () => cleanupSocket();
   }, [user]);
 
   const setupSocketEvents = () => {
+    socket.off('event_created');
+    socket.off('event_updated');
+    socket.off('event_deleted');
+    socket.off('attendee_update');
+
     socket.on('event_created', (newEvent) => {
-      if (new Date(newEvent.date_time) > new Date()) {
-        setUpcomingEvents(prev => [...prev, newEvent]);
-      } else {
-        setPastEvents(prev => [...prev, newEvent]);
+      console.log('Event created:', newEvent);
+      if (newEvent.created_by !== user.id) {
+        if (new Date(newEvent.date_time) > new Date()) {
+          setUpcomingEvents(prev => {
+            if (prev.some(event => event.id === newEvent.id)) {
+              return prev;
+            }
+            return [...prev, newEvent].sort((a, b) =>
+              new Date(a.date_time) - new Date(b.date_time)
+            );
+          });
+        } else {
+          setPastEvents(prev => {
+            if (prev.some(event => event.id === newEvent.id)) {
+              return prev;
+            }
+            return [...prev, newEvent].sort((a, b) =>
+              new Date(b.date_time) - new Date(a.date_time)
+            );
+          });
+        }
       }
     });
 
     socket.on('event_updated', (updatedEvent) => {
-      const updateEventInList = (prev) =>
-        prev.map(event => event.id === updatedEvent.id ? updatedEvent : event);
+      if (updatedEvent.created_by !== user.id) {
+        const updateEventInList = (prev) =>
+          prev.map(event => event.id === updatedEvent.id ? updatedEvent : event)
+            .sort((a, b) => new Date(a.date_time) - new Date(b.date_time));
 
-      if (new Date(updatedEvent.date_time) > new Date()) {
-        setUpcomingEvents(updateEventInList);
-        setPastEvents(prev => prev.filter(event => event.id !== updatedEvent.id));
-      } else {
-        setPastEvents(updateEventInList);
-        setUpcomingEvents(prev => prev.filter(event => event.id !== updatedEvent.id));
+        if (new Date(updatedEvent.date_time) > new Date()) {
+          setUpcomingEvents(prev => updateEventInList(prev));
+          setPastEvents(prev => prev.filter(event => event.id !== updatedEvent.id));
+        } else {
+          setPastEvents(prev => updateEventInList(prev));
+          setUpcomingEvents(prev => prev.filter(event => event.id !== updatedEvent.id));
+        }
       }
     });
 
     socket.on('event_deleted', (deletedEventId) => {
-      setUpcomingEvents(prev => prev.filter(event => event.id !== deletedEventId));
-      setPastEvents(prev => prev.filter(event => event.id !== deletedEventId));
+      if (typeof deletedEventId === 'string') {
+        setUpcomingEvents(prev => prev.filter(event => event.id !== deletedEventId));
+        setPastEvents(prev => prev.filter(event => event.id !== deletedEventId));
+      }
     });
 
     socket.on('attendee_update', ({ eventId, attendeeCount }) => {
@@ -69,6 +97,7 @@ const Events = () => {
       socket.off('attendee_update');
     };
   };
+
   const processCounts = (attendeeCounts) => {
     return Object.entries(attendeeCounts).reduce((acc, [key, value]) => {
       const count = parseInt(value, 10);
@@ -90,7 +119,7 @@ const Events = () => {
       setPastEvents(past);
       setUserEvents(userEvents.map(event => event.event_id));
       setAttendeeCounts(processCounts(attendeeCounts));
-      
+
     } catch (error) {
       console.error('Error fetching events:', error);
       setToast({
@@ -130,6 +159,43 @@ const Events = () => {
   const handleCloseDialog = () => {
     setSelectedEvent(null);
     setDialogType(null);
+  };
+
+  const handleEventCreated = (newEvent) => {
+    if (!newEvent) return;
+
+    if (new Date(newEvent.date_time) > new Date()) {
+      setUpcomingEvents(prev => [...prev, newEvent].sort((a, b) =>
+        new Date(a.date_time) - new Date(b.date_time)
+      ));
+    } else {
+      setPastEvents(prev => [...prev, newEvent].sort((a, b) =>
+        new Date(b.date_time) - new Date(a.date_time)
+      ));
+    }
+  };
+
+  const handleEventUpdated = (updatedEvent) => {
+    if (!updatedEvent) return;
+
+    const updateEventInList = (prev) =>
+      prev.map(event => event.id === updatedEvent.id ? updatedEvent : event)
+        .sort((a, b) => new Date(a.date_time) - new Date(b.date_time));
+
+    if (new Date(updatedEvent.date_time) > new Date()) {
+      setUpcomingEvents(prev => updateEventInList(prev));
+      setPastEvents(prev => prev.filter(event => event.id !== updatedEvent.id));
+    } else {
+      setPastEvents(prev => updateEventInList(prev));
+      setUpcomingEvents(prev => prev.filter(event => event.id !== updatedEvent.id));
+    }
+  };
+
+  const handleEventDeleted = (eventId) => {
+    if (!eventId) return;
+
+    setUpcomingEvents(prev => prev.filter(event => event.id !== eventId));
+    setPastEvents(prev => prev.filter(event => event.id !== eventId));
   };
 
   if (upcomingEvents.length === 0 && pastEvents.length === 0) {
@@ -208,6 +274,7 @@ const Events = () => {
         <EventForm
           onClose={handleCloseDialog}
           mode="create"
+          onSuccess={handleEventCreated}
         />
       )}
 
@@ -216,6 +283,7 @@ const Events = () => {
           event={selectedEvent}
           onClose={handleCloseDialog}
           mode="update"
+          onSuccess={handleEventUpdated}
         />
       )}
 
@@ -223,6 +291,7 @@ const Events = () => {
         <DeleteEventDialog
           event={selectedEvent}
           onClose={handleCloseDialog}
+          onSuccess={() => handleEventDeleted(selectedEvent.id)}
         />
       )}
     </div>

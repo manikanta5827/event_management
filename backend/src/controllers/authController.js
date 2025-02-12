@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import { generateToken } from '../config/jwt.js';
 import { AppError } from '../utils/errorHandler.js';
-import cloudinaryImageUpload from '../config/cloudinary.js';
+import { cloudinaryImageUpload } from '../config/cloudinary.js';
 import { validateGuestAccess } from '../utils/validators.js';
 import { AuthModel } from '../models/authModel.js';
 import { SUCCESS_MESSAGES, ERROR_MESSAGES } from '../utils/constants.js';

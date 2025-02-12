@@ -1,23 +1,33 @@
 import pg from 'pg';
 import dotenv from 'dotenv';
+import { AppError } from '../utils/errorHandler.js';
 
 dotenv.config();
 
 const pool = new pg.Pool({
-    connectionString: process.env.DATABASE_URL
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
 });
 
-pool.connect((err) => {
-    if (err) {
-        console.error('Error connecting to PostgreSQL database', err.stack);
-        throw err;
-    }
-    console.log('Connected to PostgreSQL database');
-});
-
-
+// Add error handler for the pool
 pool.on('error', (err) => {
-    console.error('Unexpected error on the PostgreSQL client', err);
+    console.error('Unexpected error on idle client', err);
     process.exit(-1);
 });
-export default pool; 
+
+// Add connection check function
+export const checkConnection = async () => {
+    try {
+        const client = await pool.connect();
+        client.release();
+        return true;
+    } catch (error) {
+        console.error('Database connection error:', error);
+        return false;
+    }
+};
+
+export default pool;

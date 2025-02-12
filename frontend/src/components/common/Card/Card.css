@@ -1,0 +1,36 @@
+.card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.card-header {
+  margin-bottom: 16px;
+}
+
+.card-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.card-subtitle {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: #6c757d;
+}
+
+.card-content {
+  color: #212529;
+}
+
+.card[role="button"] {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.card[role="button"]:hover {
+  transform: translateY(-2px);
+} 

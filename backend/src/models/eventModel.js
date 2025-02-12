@@ -178,6 +178,7 @@ export const EventModel = {
                 'SELECT COUNT(*) as count FROM attendees WHERE event_id = $1',
                 [eventId]
             );
+            console.log('count', count.rows[0].count)
             await client.query('COMMIT');
             return count.rows[0].count;
         } catch (error) {

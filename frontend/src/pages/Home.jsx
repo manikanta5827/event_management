@@ -1,11 +1,11 @@
-import { useRecoilValue } from 'recoil';
-import { userState } from '../store/atoms';
+// import { useRecoilValue } from 'recoil';
+// import { userState } from '../store/atoms';
 import Header from '../components/Header';
 import Events from '../components/Events';
 import ErrorBoundary from '../components/ErrorBoundary';
 
 const Home = () => {
-    const user = useRecoilValue(userState);
+    // const user = useRecoilValue(userState);
 
     return (
         <div className="min-h-screen bg-gray-50">

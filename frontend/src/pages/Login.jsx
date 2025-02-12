@@ -18,7 +18,7 @@ const Login = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            const response = await api.post('/auth/login', { email, password });
+            const response = await api.post('/api/auth/login', { email, password });
 
             if (response.data.success) {
                 const token = Cookies.get('token');
@@ -42,20 +42,17 @@ const Login = () => {
     const handleGuestLogin = async () => {
         setLoading(true);
         try {
-            const response = await api.post('/auth/guest-login');
+            const response = await api.post('/api/auth/guest-login');
             console.log(response)
             if (response.data.success) {
-                console.log('ssdff');
                 const token = Cookies.get('token');
-                console.log(token, 'token')
                 if (token) {
-                    console.log('dd')
                     const decodedUser = jwtDecode(token);
                     setUser(decodedUser);
                     setToast({ message: 'Welcome, Guest!', type: 'success' });
                     navigate('/guest');
                 }
-                console.log('sfve')
+                
             }
         } catch (error) {
             setToast({

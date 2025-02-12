@@ -11,7 +11,7 @@ const Logout = () => {
 
   const handleLogout = async () => {
     try {
-      await api.post('/auth/logout');
+      await api.post('/api/auth/logout');
       Cookies.remove('token');
       setUser(null);
       setToast({ message: 'Logged out successfully', type: 'success' });

@@ -1,9 +1,9 @@
 import { useRef, useEffect, useState } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import { useSetRecoilState } from 'recoil';
-import { toastState } from '../store/atoms';
-import api from '../api/api';
+import { useSetRecoilState, useRecoilValue } from 'recoil';
+import { toastState, userState } from '../store/atoms';
 import PropTypes from 'prop-types';
+import socket from '../utils/socket';
 
 // Helper function for date formatting
 const formatDateTime = (dateString) => {
@@ -21,6 +21,7 @@ const formatDateTime = (dateString) => {
 const EventDialog = ({ event, onClose, isAttending, attendeeCount, onStatusChange, isPast }) => {
   const dialogRef = useRef(null);
   const setToast = useSetRecoilState(toastState);
+  const user = useRecoilValue(userState);
   const [loading, setLoading] = useState(false);
 
   const handleClose = () => {
@@ -51,18 +52,20 @@ const EventDialog = ({ event, onClose, isAttending, attendeeCount, onStatusChang
     if (isPast) return;
     setLoading(true);
     try {
-      const endpoint = isAttending ? '/events/leave' : '/events/join';
-      await api.post(endpoint, { eventId: event.id });
-      setToast({
-        message: isAttending ? 'Left event successfully' : 'Joined event successfully',
-        type: 'success'
-      });
+      if (isAttending) {
+        socket.emit('leave_event', {
+          userId: user.id,
+          eventId: event.id
+        });
+      } else {
+        socket.emit('join_event', {
+          userId: user.id,
+          eventId: event.id
+        });
+      }
       onStatusChange();
     } catch (error) {
-      setToast({
-        message: error.response?.data?.message || 'Operation failed',
-        type: 'error'
-      });
+      console.error('Socket error:', error);
     } finally {
       setLoading(false);
     }
@@ -141,7 +144,7 @@ const EventDialog = ({ event, onClose, isAttending, attendeeCount, onStatusChang
 
 EventDialog.propTypes = {
   event: PropTypes.shape({
-    id: PropTypes.number.isRequired,
+    id: PropTypes.string.isRequired,
     name: PropTypes.string.isRequired,
     creator_name: PropTypes.string.isRequired,
     date_time: PropTypes.string.isRequired,

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useSetRecoilState } from 'recoil';
 import { useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
+import { jwtDecode } from 'jwt-decode';
 import { userState, loadingState } from '../store/atoms';
 
 const InitializeAuth = () => {
@@ -13,7 +14,7 @@ const InitializeAuth = () => {
     const token = Cookies.get('token');
     if (token) {
       try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
+        const payload = jwtDecode(token);
         setUser(payload);
         const currentPath = window.location.pathname;
         if (payload.role === 'guest' && currentPath !== '/guest') {

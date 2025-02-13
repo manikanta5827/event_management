@@ -123,15 +123,21 @@ const Events = () => {
     });
 
     socket.on('attendee_update', ({ eventId, attendeeCount, eventName, action, userName }) => {
-      if (!eventId || !eventName || !action || !userName) return;
+      if (!eventId) return;
+
+      console.log('Received attendee update:', { eventId, attendeeCount, eventName, action, userName });
 
       const count = parseInt(attendeeCount, 10);
       if (!isNaN(count) && count >= 0) {
-        setAttendeeCounts(prev => ({
-          ...prev,
-          [eventId]: count
-        }));
+        setAttendeeCounts(prev => {
+          console.log('Updating attendee counts:', { prev, eventId, count });
+          return {
+            ...prev,
+            [eventId]: count
+          };
+        });
 
+        // Only show toast for other users' actions
         if (userName && userName !== user.name) {
           setToast({
             message: `${userName} has ${action} event "${eventName}"`,
@@ -189,19 +195,24 @@ const Events = () => {
 
   const handleJoinLeave = async (eventId, isJoining) => {
     const socketEvent = isJoining ? 'join_event' : 'leave_event';
-    const currentCount = attendeeCounts[eventId] || 0;
     const event = upcomingEvents.find(e => e.id === eventId) || pastEvents.find(e => e.id === eventId);
 
+    if (!event) return;
+
+    // Update local user events state immediately for better UX
     setUserEvents(prev =>
       isJoining
         ? [...prev, eventId]
         : prev.filter(id => id !== eventId)
     );
 
-    setAttendeeCounts(prev => ({
-      ...prev,
-      [eventId]: Math.max(0, currentCount + (isJoining ? 1 : -1))
-    }));
+    // Emit socket event with all required information
+    socket.emit(socketEvent, {
+      userId: user.id,
+      eventId: eventId,
+      eventName: event.name,
+      userName: user.name
+    });
 
     // Show toast for the user performing the action
     setToast({
@@ -209,13 +220,6 @@ const Events = () => {
         ? `You have joined "${event.name}"`
         : `You have left "${event.name}"`,
       type: 'success'
-    });
-
-    socket.emit(socketEvent, {
-      userId: user.id,
-      eventId: eventId,
-      eventName: event.name,
-      userName: user.name
     });
   };
 

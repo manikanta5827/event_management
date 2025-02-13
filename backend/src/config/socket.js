@@ -180,12 +180,21 @@ export const setupSocket = (server) => {
             }
         });
 
-        socket.on('join_event', async ({ userId, eventId }) => {
+        socket.on('join_event', async ({ userId, eventId, eventName, userName }) => {
             console.log(`➕ Join event request received for event ${eventId} from user ${userId}`);
             try {
                 const attendeeCount = await EventModel.joinEvent(eventId, userId);
                 console.log(`✨ User ${userId} joined event ${eventId}. New attendee count:`, attendeeCount);
-                socket.broadcast.emit('attendee_update', { eventId, attendeeCount });
+
+                // Send all required information in the broadcast
+                io.emit('attendee_update', {
+                    eventId,
+                    attendeeCount,
+                    eventName,
+                    action: 'joined',
+                    userName
+                });
+
                 socket.emit('success', { message: SUCCESS_MESSAGES.EVENT_JOINED });
             } catch (error) {
                 console.error(`❌ Join event error:`, error.message);
@@ -197,12 +206,21 @@ export const setupSocket = (server) => {
             }
         });
 
-        socket.on('leave_event', async ({ userId, eventId }) => {
+        socket.on('leave_event', async ({ userId, eventId, eventName, userName }) => {
             console.log(`➖ Leave event request received for event ${eventId} from user ${userId}`);
             try {
                 const attendeeCount = await EventModel.leaveEvent(eventId, userId);
                 console.log(`✨ User ${userId} left event ${eventId}. New attendee count:`, attendeeCount);
-                socket.broadcast.emit('attendee_update', { eventId, attendeeCount });
+
+                // Send all required information in the broadcast
+                io.emit('attendee_update', {
+                    eventId,
+                    attendeeCount,
+                    eventName,
+                    action: 'left',
+                    userName
+                });
+
                 socket.emit('success', { message: SUCCESS_MESSAGES.EVENT_LEFT });
             } catch (error) {
                 console.error(`❌ Leave event error:`, error.message);

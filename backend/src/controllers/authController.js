@@ -7,13 +7,13 @@ import { AuthModel } from '../models/authModel.js';
 import { SUCCESS_MESSAGES, ERROR_MESSAGES } from '../utils/constants.js';
 
 // Cookie options based on environment
-const cookieOptions = {
-    httpOnly: false,
-    secure: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    path: '/',
-    maxAge: 2 * 24 * 60 * 60 * 1000 // 24 hours
-};
+// const cookieOptions = {
+//     httpOnly: false,
+//     secure: true,
+//     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+//     path: '/',
+//     maxAge: 2 * 24 * 60 * 60 * 1000 // 24 hours
+// };
 
 export const register = async (req, res, next) => {
     try {
@@ -61,11 +61,12 @@ export const login = async (req, res, next) => {
         const token = generateToken(user, 'user');
 
         // Set cookie
-        res.cookie('token', token, cookieOptions);
+        // res.cookie('token', token, cookieOptions);
 
         res.json({
             success: true,
-            message: SUCCESS_MESSAGES.LOGIN
+            message: SUCCESS_MESSAGES.LOGIN,
+            token
         });
     } catch (error) {
         next(error);
@@ -87,11 +88,12 @@ export const guestLogin = async (req, res, next) => {
         const token = generateToken(guestUser, 'guest');
 
         // Set cookie
-        res.cookie('token', token, cookieOptions);
+        // res.cookie('token', token, cookieOptions);
 
         res.json({
             success: true,
-            message: SUCCESS_MESSAGES.LOGIN
+            message: SUCCESS_MESSAGES.LOGIN,
+            token
         });
     } catch (error) {
         next(error);
@@ -101,7 +103,7 @@ export const guestLogin = async (req, res, next) => {
 export const logout = async (req, res, next) => {
     try {
         // Clear cookie
-        res.clearCookie('token', cookieOptions);
+        // res.clearCookie('token', cookieOptions);
 
         res.json({
             success: true,

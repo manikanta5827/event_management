@@ -1,6 +1,5 @@
 import { useSetRecoilState } from 'recoil';
 import { useNavigate } from 'react-router-dom';
-import Cookies from 'js-cookie';
 import api from '../api/api';
 import { userState, toastState } from '../store/atoms';
 
@@ -12,7 +11,7 @@ const Logout = () => {
   const handleLogout = async () => {
     try {
       await api.post('/api/auth/logout');
-      Cookies.remove('token');
+      localStorage.removeItem('token');
       setUser(null);
       setToast({ message: 'Logged out successfully', type: 'success' });
       navigate('/login');

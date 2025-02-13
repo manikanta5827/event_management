@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSetRecoilState } from 'recoil';
 import { jwtDecode } from 'jwt-decode';
-import Cookies from 'js-cookie';
+// import Cookies from 'js-cookie';
 import api from '../api/api';
 import { userState, toastState } from '../store/atoms';
 import { EnvelopeIcon, LockClosedIcon } from '@heroicons/react/24/outline';
@@ -15,6 +15,9 @@ const Login = () => {
     const setUser = useSetRecoilState(userState);
     const setToast = useSetRecoilState(toastState);
 
+    const saveToken = (Token) => {
+        localStorage.setItem('token', Token);
+    }
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -22,7 +25,8 @@ const Login = () => {
             const response = await api.post('/api/auth/login', { email, password });
 
             if (response.data.success) {
-                const token = Cookies.get('token');
+                const token = response.data.token;
+                saveToken(token);
                 if (token) {
                     const decodedUser = jwtDecode(token);
                     setUser(decodedUser);
@@ -45,7 +49,8 @@ const Login = () => {
         try {
             const response = await api.post('/api/auth/guest-login');
             if (response.data.success) {
-                const token = Cookies.get('token');
+                const token = response.data.token;
+                saveToken(token);
                 if (token) {
                     const decodedUser = jwtDecode(token);
                     setUser(decodedUser);

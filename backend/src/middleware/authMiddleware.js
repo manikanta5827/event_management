@@ -4,7 +4,14 @@ import { ERROR_MESSAGES } from '../utils/constants.js';
 
 const authMiddleware = async (req, res, next) => {
     try {
-        const token = req.cookies.token;
+        // Get token from Authorization header
+        // console.log(req.headers)
+        const authHeader = req.headers.authorization;
+        let token;
+        // console.log(token)
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            token = authHeader.split(' ')[1];
+        }
 
         if (!token) {
             throw new AppError(ERROR_MESSAGES.UNAUTHORIZED, 401);
@@ -18,9 +25,6 @@ const authMiddleware = async (req, res, next) => {
             throw new AppError(ERROR_MESSAGES.INVALID_TOKEN, 401);
         }
     } catch (error) {
-        if (req.cookies.token) {
-            res.clearCookie('token');
-        }
         next(error);
     }
 };

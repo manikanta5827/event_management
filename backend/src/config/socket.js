@@ -4,15 +4,39 @@ import { SUCCESS_MESSAGES, ERROR_MESSAGES } from '../utils/constants.js';
 import { cloudinaryImageUpload, cloudinaryImageDelete } from './cloudinary.js';
 import { checkConnection } from './db.js';
 import { AppError } from '../utils/errorHandler.js';
+import jwt from 'jsonwebtoken';
 
 export const setupSocket = (server) => {
     const io = new Server(server, {
         cors: {
-            origin: process.env.CLIENT_URL || 'http://localhost:5173',
-            credentials: true
+            origin: true,
+            methods: ['GET', 'POST'],
+            allowedHeaders: ['Content-Type', 'Authorization']
         },
         pingTimeout: 60000,
-        pingInterval: 25000
+        pingInterval: 25000,
+        transports: ['websocket', 'polling']
+    });
+
+    // Add authentication middleware for socket connections
+    io.use((socket, next) => {
+        const token = socket.handshake.auth.token || socket.handshake.headers.authorization;
+
+        if (!token) {
+            return next(new Error('Authentication error'));
+        }
+
+        // Remove 'Bearer ' if present
+        const tokenString = token.replace('Bearer ', '');
+
+        try {
+            // Verify token here
+            const decoded = jwt.verify(tokenString, process.env.JWT_SECRET);
+            socket.user = decoded;
+            next();
+        } catch (err) {
+            next(new Error('Authentication error'));
+        }
     });
 
     // Track connected clients for better monitoring
@@ -37,7 +61,7 @@ export const setupSocket = (server) => {
             console.log(`📊 Remaining connected clients: ${connectedClients.size}`);
         });
 
-       
+
         // Event handlers
         socket.on('new_event', async ({ eventData, userId }, callback) => {
             console.log(`📝 New event request received from user ${userId}:`);

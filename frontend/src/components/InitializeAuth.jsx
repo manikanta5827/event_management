@@ -11,7 +11,7 @@ const InitializeAuth = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = Cookies.get('token');
+    const token = localStorage.getItem('token');
     if (token) {
       try {
         const payload = jwtDecode(token);

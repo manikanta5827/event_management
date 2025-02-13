@@ -9,7 +9,7 @@ import { SUCCESS_MESSAGES, ERROR_MESSAGES } from '../utils/constants.js';
 // Cookie options based on environment
 const cookieOptions = {
     httpOnly: false,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     path: '/',
     maxAge: 2 * 24 * 60 * 60 * 1000 // 24 hours

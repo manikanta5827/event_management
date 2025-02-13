@@ -21,6 +21,23 @@ export const setupSocket = (server) => {
     io.on('connection', (socket) => {
         console.log(`🟢 Client connected: ${socket.id}`);
 
+        // Add client to connected clients map with timestamp
+        connectedClients.set(socket.id, {
+            userId: null, // Can be updated when user authenticates
+            connectedAt: new Date(),
+            socket: socket
+        });
+
+        console.log(`📊 Connected clients: ${connectedClients.size}`);
+
+        // Handle client disconnection
+        socket.on('disconnect', () => {
+            console.log(`🔴 Client disconnected: ${socket.id}`);
+            connectedClients.delete(socket.id);
+            console.log(`📊 Remaining connected clients: ${connectedClients.size}`);
+        });
+
+       
         // Event handlers
         socket.on('new_event', async ({ eventData, userId }, callback) => {
             console.log(`📝 New event request received from user ${userId}:`);

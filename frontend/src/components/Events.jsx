@@ -9,6 +9,7 @@ import DeleteEventDialog from './DeleteEventDialog';
 import socket from '../utils/socket';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import { CATEGORIES } from '../utils/constants';
+import EmptyState from './EmptyState';
 
 const Events = () => {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
@@ -50,6 +51,7 @@ const Events = () => {
     socket.off('attendee_update');
 
     socket.on('event_created', (newEvent) => {
+      if (!newEvent?.name) return;
       console.log('Event created:', newEvent);
       if (newEvent.created_by !== user.id) {
         setToast({
@@ -79,6 +81,7 @@ const Events = () => {
     });
 
     socket.on('event_updated', (updatedEvent) => {
+      if (!updatedEvent?.name) return;
       if (updatedEvent.created_by !== user.id) {
         setToast({
           message: `Event "${updatedEvent.name}" has been updated`,
@@ -99,28 +102,29 @@ const Events = () => {
     });
 
     socket.on('event_deleted', (data) => {
-      if (data && data.eventId) {
-        setToast({
-          message: `Event "${data.eventName}" has been deleted`,
-          type: 'info'
-        });
-        // Update upcoming events
-        setUpcomingEvents(prev => {
-          const filtered = prev.filter(event => event.id !== data.eventId);
-          console.log('Filtered upcoming events:', filtered);
-          return filtered;
-        });
+      if (!data?.eventId || !data?.eventName) return;
+      setToast({
+        message: `Event "${data.eventName}" has been deleted`,
+        type: 'info'
+      });
+      // Update upcoming events
+      setUpcomingEvents(prev => {
+        const filtered = prev.filter(event => event.id !== data.eventId);
+        console.log('Filtered upcoming events:', filtered);
+        return filtered;
+      });
 
-        // Update past events
-        setPastEvents(prev => {
-          const filtered = prev.filter(event => event.id !== data.eventId);
-          console.log('Filtered past events:', filtered);
-          return filtered;
-        });
-      }
+      // Update past events
+      setPastEvents(prev => {
+        const filtered = prev.filter(event => event.id !== data.eventId);
+        console.log('Filtered past events:', filtered);
+        return filtered;
+      });
     });
 
     socket.on('attendee_update', ({ eventId, attendeeCount, eventName, action, userName }) => {
+      if (!eventId || !eventName || !action || !userName) return;
+
       const count = parseInt(attendeeCount, 10);
       if (!isNaN(count) && count >= 0) {
         setAttendeeCounts(prev => ({
@@ -128,8 +132,7 @@ const Events = () => {
           [eventId]: count
         }));
 
-        // Show toast for join/leave updates
-        if (userName !== user.name) {
+        if (userName && userName !== user.name) {
           setToast({
             message: `${userName} has ${action} event "${eventName}"`,
             type: 'info'
@@ -162,12 +165,13 @@ const Events = () => {
   const fetchEvents = async () => {
     try {
       const response = await api.get('/api/events');
-      const { upcoming, past, userEvents, attendeeCounts } = response.data.data;
+      const { upcoming = [], past = [], userEvents = [], attendeeCounts = {} } = response.data.data;
 
-      setUpcomingEvents(upcoming);
-      setPastEvents(past);
-      setUserEvents(userEvents.map(event => event.event_id));
-      setAttendeeCounts(processCounts(attendeeCounts));
+      // Set default empty arrays if data is null/undefined
+      setUpcomingEvents(Array.isArray(upcoming) ? upcoming : []);
+      setPastEvents(Array.isArray(past) ? past : []);
+      setUserEvents(Array.isArray(userEvents) ? userEvents.map(event => event.event_id) : []);
+      setAttendeeCounts(processCounts(attendeeCounts || {}));
 
     } catch (error) {
       console.error('Error fetching events:', error);
@@ -175,6 +179,11 @@ const Events = () => {
         message: 'Failed to load events',
         type: 'error'
       });
+      // Set empty defaults on error
+      setUpcomingEvents([]);
+      setPastEvents([]);
+      setUserEvents([]);
+      setAttendeeCounts({});
     }
   };
 
@@ -292,13 +301,42 @@ const Events = () => {
     });
   };
 
-  if (upcomingEvents.length === 0 && pastEvents.length === 0) {
+  // Update the empty state check
+  const renderEvents = (events) => {
+    if (!Array.isArray(events) || events.length === 0) {
+      return (
+        <EmptyState
+          message={activeTab === 'upcoming' ? "No upcoming events" : "No past events"}
+          submessage={activeTab === 'upcoming' ? "Be the first to create an event!" : "Past events will appear here"}
+        />
+      );
+    }
+
     return (
-      <div className="text-center py-8 text-gray-600">
-        Failed to load events. Please try again later.
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {events.map((event) => (
+          <EventCard
+            key={event.id}
+            event={event}
+            attendeeCount={attendeeCounts[event.id] || 0}
+            isAttending={userEvents.includes(event.id)}
+            onEventClick={handleEventClick}
+            onJoinLeave={handleJoinLeave}
+            isPast={activeTab === 'past'}
+            isGuestView={user?.role === 'guest'}
+          />
+        ))}
       </div>
     );
-  }
+  };
+
+  // if (upcomingEvents.length === 0 && pastEvents.length === 0) {
+  //   return (
+  //     <div className="text-center py-8 text-gray-600">
+  //       Failed to load events. Please try again later.
+  //     </div>
+  //   );
+  // }
 
   const isUserAttending = (eventId) => {
     return userEvents.includes(eventId);
@@ -384,7 +422,7 @@ const Events = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Create Event Button */}
+      {/* Tabs and Create Button */}
       <div className="flex justify-between items-center mb-8">
         <div className="flex space-x-4">
           <button
@@ -406,40 +444,29 @@ const Events = () => {
             Past Events
           </button>
         </div>
-        <button
-          onClick={() => handleEventClick(null, 'create')}
-          className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-        >
-          <PlusIcon className="w-5 h-5 mr-2" />
-          Create Event
-        </button>
+        {user?.role !== 'guest' && (
+          <button
+            onClick={() => handleEventClick(null, 'create')}
+            className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            <PlusIcon className="w-5 h-5 mr-2" />
+            Create Event
+          </button>
+        )}
       </div>
 
       {/* Add filter section */}
       <FilterSection />
 
-      {/* Update events grid to use filtered events */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {getFilteredEvents(activeTab === 'upcoming' ? upcomingEvents : pastEvents)
-          .map((event) => (
-            <EventCard
-              key={`event-${event.id}`}
-              event={event}
-              attendeeCount={attendeeCounts[event.id] || 0}
-              isAttending={isUserAttending(event.id)}
-              onEventClick={handleEventClick}
-              onJoinLeave={handleJoinLeave}
-              isPast={activeTab === 'past'}
-            />
-          ))}
-      </div>
+      {/* Events Grid */}
+      {renderEvents(activeTab === 'upcoming' ? upcomingEvents : pastEvents)}
 
       {/* Dialogs */}
       {selectedEvent && dialogType === 'view' && (
         <EventDialog
           event={selectedEvent}
           onClose={handleCloseDialog}
-          isAttending={isUserAttending(selectedEvent.id)}
+          isAttending={userEvents.includes(selectedEvent.id)}
           attendeeCount={attendeeCounts[selectedEvent.id] || 0}
           onStatusChange={fetchEvents}
           isPast={activeTab === 'past'}
